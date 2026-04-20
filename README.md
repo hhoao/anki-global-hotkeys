@@ -1,19 +1,18 @@
 # Anki Global Hotkeys
 
-在 Linux（Wayland / X11）上，切换到其他应用时仍可通过全局快捷键控制 Anki 复习。
-
-> **仅支持 Linux**，通过 `evdev` 直接读取键盘设备实现真正的全局热键。
+切换到其他应用时仍可通过全局快捷键控制 Anki 复习。支持 Linux 和 Windows。
 
 ---
 
 ## 功能
 
 - 任意窗口激活状态下触发 Anki 复习热键
-- 支持 Wayland 和 X11
+- **Linux**：通过 `evdev` 直接读取键盘，支持 Wayland 和 X11
+- **Windows**：通过 `keyboard` 库注册系统级全局热键，无需管理员权限
 - 拦截模式：热键组合不传递给其他程序
 - 配置界面：Tools → 全局热键配置
 - 热键修改后实时生效，无需重启
-- 自动检测 snap / flatpak 沙箱并给出提示
+- 自动检测 snap / flatpak 沙箱并给出提示（Linux）
 
 ## 默认热键
 
@@ -29,10 +28,10 @@
 
 ## 安装要求
 
-- Linux 系统（Wayland 或 X11）
+### Linux
+
 - Anki **原生安装包**（不支持 snap / flatpak）
 - Python 3.10+
-- 以下 Python 库：
 
 ```bash
 pip install evdev requests
@@ -44,6 +43,16 @@ pip install evdev requests
 sudo usermod -a -G input $USER
 # 然后注销并重新登录
 ```
+
+### Windows
+
+- Python 3.10+
+
+```bash
+pip install keyboard requests
+```
+
+无需任何权限配置，安装后即可使用。
 
 ## 安装插件
 
@@ -60,7 +69,7 @@ sudo usermod -a -G input $USER
 ## 使用方法
 
 1. 安装插件并重启 Anki
-2. 若首次运行缺少权限，按照弹出提示执行授权命令并重新登录
+2. **Linux**：若首次运行缺少权限，按照弹出提示执行授权命令并重新登录
 3. Anki 启动后 daemon 自动在后台运行
 4. 切换到任意其他应用，按热键即可控制复习
 
@@ -73,11 +82,16 @@ Tools → 全局热键配置，可修改：
 
 ## 工作原理
 
-插件内置一个 Python daemon，通过 `evdev` 独立于显示服务器直接监听键盘事件，
+插件内置一个 Python daemon，根据平台自动选择后端：
+
+- **Linux**：通过 `evdev` 独立于显示服务器直接监听键盘事件
+- **Windows**：通过 `keyboard` 库注册系统级全局钩子
+
 触发热键时调用 [AnkiConnect](https://ankiweb.net/shared/info/2055492159) HTTP API 控制 Anki。
 
 ## 依赖
 
 - [AnkiConnect](https://ankiweb.net/shared/info/2055492159)（需单独安装）
-- [evdev](https://python-evdev.readthedocs.io/)
+- Linux：[evdev](https://python-evdev.readthedocs.io/)
+- Windows：[keyboard](https://github.com/boppreh/keyboard)
 - [requests](https://requests.readthedocs.io/)

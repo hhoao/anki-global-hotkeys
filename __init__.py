@@ -9,6 +9,7 @@ import json
 import os
 import signal
 import subprocess
+import sys
 from pathlib import Path
 
 from aqt import gui_hooks, mw
@@ -45,7 +46,9 @@ ACTION_LABELS = {
 
 # ── 沙箱 & 权限检测 ───────────────────────────────────────────────
 def detect_sandbox() -> str:
-    """返回 'snap'、'flatpak' 或 ''（原生）。"""
+    """返回 'snap'、'flatpak' 或 ''（原生 / Windows）。"""
+    if sys.platform == "win32":
+        return ""
     if os.environ.get("SNAP") or str(Path(__file__)).startswith("/snap/"):
         return "snap"
     if os.environ.get("FLATPAK_ID") or Path("/.flatpak-info").exists():
@@ -54,7 +57,9 @@ def detect_sandbox() -> str:
 
 
 def check_input_permission() -> bool:
-    """检查当前用户是否能读取 /dev/input/event* 设备。"""
+    """检查是否能读取键盘设备。Windows 始终返回 True。"""
+    if sys.platform == "win32":
+        return True
     devices = glob.glob("/dev/input/event*")
     if not devices:
         return False
@@ -96,7 +101,7 @@ def start_daemon() -> None:
         return
     try:
         subprocess.Popen(
-            ["python3", str(DAEMON_SCRIPT), "--config", str(CONFIG_FILE)],
+            [sys.executable, str(DAEMON_SCRIPT), "--config", str(CONFIG_FILE)],
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
             start_new_session=True,
@@ -121,7 +126,7 @@ def restart_daemon() -> None:
     QTimer.singleShot(800, start_daemon)
 
 
-# ── 权限设置引导对话框 ─────────────────────────────────────────────
+# ── 权限设置引导对话框（仅 Linux）────────────────────────────────
 class PermissionSetupDialog(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -132,7 +137,6 @@ class PermissionSetupDialog(QDialog):
     def _build_ui(self):
         root = QVBoxLayout(self)
 
-        # 说明
         info = QLabel(
             "全局热键功能需要读取键盘设备（<code>/dev/input/</code>），"
             "但您的账户当前没有访问权限。\n\n"
@@ -142,7 +146,6 @@ class PermissionSetupDialog(QDialog):
         info.setTextFormat(Qt.TextFormat.RichText)
         root.addWidget(info)
 
-        # 命令框
         cmd_group = QGroupBox("在终端中运行（只需一次）")
         cmd_layout = QVBoxLayout(cmd_group)
 
@@ -165,7 +168,6 @@ class PermissionSetupDialog(QDialog):
         cmd_layout.addWidget(copy_btn, alignment=Qt.AlignmentFlag.AlignRight)
         root.addWidget(cmd_group)
 
-        # 步骤说明
         steps = QLabel(
             "操作步骤：\n"
             "  1. 点击「复制命令」\n"
@@ -183,7 +185,7 @@ class PermissionSetupDialog(QDialog):
         root.addWidget(btns)
 
 
-# ── 沙箱警告对话框 ───────────────────────────────────────────────
+# ── 沙箱警告对话框（仅 Linux）────────────────────────────────────
 _SANDBOX_INFO = {
     "snap": {
         "title": "不支持 snap 版 Anki",
@@ -261,33 +263,34 @@ class HotkeyConfigDialog(QDialog):
     def _build_ui(self):
         root = QVBoxLayout(self)
 
-        # ── 沙箱 / 权限警告 ────────────────────────────────────────
-        sandbox = detect_sandbox()
-        if sandbox:
-            info = _SANDBOX_INFO[sandbox]
-            warn = QLabel(
-                f"⚠ 检测到 {sandbox} 沙箱，全局热键功能受限。"
-                f"<a href='#sandbox'>查看解决方法</a>"
-            )
-            warn.setStyleSheet(
-                "background:#f8d7da; color:#721c24; padding:8px; border-radius:4px;"
-            )
-            warn.setTextFormat(Qt.TextFormat.RichText)
-            warn.linkActivated.connect(
-                lambda _: SandboxWarningDialog(sandbox, self).exec()
-            )
-            root.addWidget(warn)
-        elif not check_input_permission():
-            warn = QLabel(
-                "⚠ 缺少键盘设备读取权限，热键无法工作。"
-                "<a href='#setup'>查看设置方法</a>"
-            )
-            warn.setStyleSheet(
-                "background:#fff3cd; color:#856404; padding:8px; border-radius:4px;"
-            )
-            warn.setTextFormat(Qt.TextFormat.RichText)
-            warn.linkActivated.connect(lambda _: PermissionSetupDialog(self).exec())
-            root.addWidget(warn)
+        # ── 沙箱 / 权限警告（仅 Linux）────────────────────────────
+        if sys.platform != "win32":
+            sandbox = detect_sandbox()
+            if sandbox:
+                info = _SANDBOX_INFO[sandbox]
+                warn = QLabel(
+                    f"⚠ 检测到 {sandbox} 沙箱，全局热键功能受限。"
+                    f"<a href='#sandbox'>查看解决方法</a>"
+                )
+                warn.setStyleSheet(
+                    "background:#f8d7da; color:#721c24; padding:8px; border-radius:4px;"
+                )
+                warn.setTextFormat(Qt.TextFormat.RichText)
+                warn.linkActivated.connect(
+                    lambda _: SandboxWarningDialog(sandbox, self).exec()
+                )
+                root.addWidget(warn)
+            elif not check_input_permission():
+                warn = QLabel(
+                    "⚠ 缺少键盘设备读取权限，热键无法工作。"
+                    "<a href='#setup'>查看设置方法</a>"
+                )
+                warn.setStyleSheet(
+                    "background:#fff3cd; color:#856404; padding:8px; border-radius:4px;"
+                )
+                warn.setTextFormat(Qt.TextFormat.RichText)
+                warn.linkActivated.connect(lambda _: PermissionSetupDialog(self).exec())
+                root.addWidget(warn)
 
         # ── daemon 状态 ────────────────────────────────────────────
         status_group = QGroupBox("Daemon 状态")
@@ -345,7 +348,7 @@ class HotkeyConfigDialog(QDialog):
         root.addLayout(btn_row)
 
     def _refresh_status(self):
-        if not check_input_permission():
+        if sys.platform != "win32" and not check_input_permission():
             self._status_label.setText("⚠ 权限不足")
             self._status_label.setStyleSheet("color: #856404;")
             self._toggle_btn.setEnabled(False)
@@ -397,11 +400,15 @@ def on_main_window_init():
     mw.form.menuTools.addSeparator()
     mw.form.menuTools.addAction(action)
 
+    if sys.platform == "win32":
+        start_daemon()
+        atexit.register(stop_daemon)
+        return
+
     sandbox = detect_sandbox()
     flag = CONFIG_FILE.parent / ".anki_hotkey_setup_shown"
 
     if sandbox:
-        # snap / flatpak：只弹一次沙箱警告，不尝试启动 daemon
         if not flag.exists():
             flag.touch()
             QTimer.singleShot(1500, lambda: SandboxWarningDialog(sandbox, mw).exec())
@@ -409,7 +416,6 @@ def on_main_window_init():
         start_daemon()
         atexit.register(stop_daemon)
     else:
-        # 原生安装但缺少 input 组权限：弹一次授权引导
         if not flag.exists():
             flag.touch()
             QTimer.singleShot(1500, lambda: PermissionSetupDialog(mw).exec())
