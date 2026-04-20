@@ -1,0 +1,27 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build .ankiaddon package
+        run: |
+          zip anki-global-hotkeys.ankiaddon \
+            __init__.py \
+            daemon.py \
+            meta.json
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: anki-global-hotkeys.ankiaddon
+          generate_release_notes: true
