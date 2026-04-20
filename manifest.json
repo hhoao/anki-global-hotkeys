@@ -1,0 +1,10 @@
+{
+  "name": "Anki Global Hotkeys",
+  "package": "anki_global_hotkeys",
+  "author": "hhoao",
+  "version": "1.0.0",
+  "homepage": "https://github.com/hhoao/anki-global-hotkeys",
+  "conflicts": [],
+  "min_point_version": 50,
+  "max_point_version": -1
+}
