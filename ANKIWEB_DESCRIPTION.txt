@@ -1,56 +1,55 @@
-Control Anki reviews with global hotkeys — even when Anki is in the background.
+在任意应用激活时，通过全局快捷键控制 Anki 复习——无需切换窗口。
 
-Works on <b>Linux</b> (Wayland / X11) and <b>Windows</b>.
-
-<hr>
-
-<b>Why you need this</b>
-
-Anki's built-in shortcuts only work when the Anki window is focused. This addon lets you answer cards no matter what app is in front — your browser, your IDE, your terminal, anything.
-
-<b>Perfect for stealth studying:</b>
-Keep Anki minimized or behind another window. Glance at a card, then answer without ever switching windows. Your colleagues will just see you typing — they'll never know you're doing flashcards. Great for vocabulary, formulas, or anything you want to drill during downtime.
+支持 <b>Linux</b>（Wayland / X11）和 <b>Windows</b>。
 
 <hr>
 
-<b>Features</b>
+<b>为什么需要它？</b>
 
-- Answer cards from any application without switching windows
-- Intercept mode: hotkey combos are consumed and not passed to other apps
-- Configurable hotkeys via <b>Tools → Global Hotkeys Config</b>
-- Changes take effect instantly — no restart needed
-- Linux: automatic snap/flatpak sandbox detection with step-by-step guidance
+Anki 自带的快捷键只在 Anki 窗口激活时有效。这个插件让你在任何应用前台时都能答题——浏览器、编辑器、终端……随便什么都行。
 
-<b>Default hotkeys</b>
-
-Ctrl+Shift+Space — Show Answer
-Ctrl+Shift+1 — Again
-Ctrl+Shift+2 — Hard
-Ctrl+Shift+3 — Good
-Ctrl+Shift+4 — Easy
-
-All hotkeys are fully customizable.
+<b>摸鱼神器用法：</b>
+把 Anki 最小化或藏到其他窗口后面，把卡片做成看起来像正常工作内容的样子（代码注释风格的单词卡、伪装成文档的知识点……），瞄一眼卡片内容，按快捷键答题，全程不切窗口。同事只会看到你在敲键盘，完全不知道你在背单词。上班摸鱼、开会摸鱼、等编译摸鱼，时间全部利用起来。
 
 <hr>
 
-<b>Requirements</b>
+<b>功能特性</b>
 
-• <a href="https://ankiweb.net/shared/info/2055492159">AnkiConnect</a> addon (must be installed separately)
+- 在任意窗口激活状态下触发复习快捷键
+- 拦截模式：热键组合不会传递给其他程序
+- 配置界面：<b>Tools → 全局热键配置</b>，修改立即生效，无需重启
+- Linux：自动检测 snap / flatpak 沙箱并给出分步引导
 
-<b>Linux:</b>
+<b>默认热键</b>
+
+Ctrl+Shift+Space — 显示答案
+Ctrl+Shift+1 — Again（重来）
+Ctrl+Shift+2 — Hard（困难）
+Ctrl+Shift+3 — Good（良好）
+Ctrl+Shift+4 — Easy（简单）
+
+所有热键均可自由修改。
+
+<hr>
+
+<b>安装要求</b>
+
+• 需先安装 <a href="https://ankiweb.net/shared/info/2055492159">AnkiConnect</a> 插件
+
+<b>Linux：</b>
 pip install evdev requests
-sudo usermod -a -G input $USER  (then log out and back in)
-Native Anki install only — snap/flatpak not supported.
+sudo usermod -a -G input $USER（执行后注销重新登录）
+仅支持原生安装包，不支持 snap / flatpak。
 
-<b>Windows:</b>
+<b>Windows：</b>
 pip install keyboard requests
-No special permissions needed.
+无需任何权限配置，安装即用。
 
 <hr>
 
-<b>How it works</b>
+<b>工作原理</b>
 
-A lightweight daemon runs in the background when Anki is open.
-On Linux it reads raw keyboard events via evdev, bypassing the display server entirely (works on both Wayland and X11).
-On Windows it registers a system-level keyboard hook via the keyboard library.
-When a hotkey fires, it calls the AnkiConnect HTTP API to control your review session.
+Anki 启动时自动拉起一个轻量后台 daemon。
+Linux 上通过 evdev 直接读取原始键盘事件，完全绕过显示服务器，Wayland 和 X11 均支持。
+Windows 上通过 keyboard 库注册系统级键盘钩子。
+触发热键后调用 AnkiConnect HTTP API 控制复习流程，Anki 关闭时 daemon 自动退出。
